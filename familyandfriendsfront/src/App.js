@@ -1,6 +1,7 @@
 import React from "react";
 import LoginForm from "./components/login/login";
 import Dashboard from "./components/dashboard/dashboard";
+import Configuracion from "./components/configuracion/configuracion";
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom'; // Asegúrate de importar 'Routes' en lugar de 'Switch'
 
 
@@ -10,7 +11,7 @@ function App() {
       <Routes> 
         <Route path="/" element={<LoginForm />} />
         <Route path="/dashboard" element={<Dashboard />} />
-        {/* Otras rutas aquí */}
+        <Route path="/configuracion" element={<Configuracion />} />
       </Routes> 
     </Router>
   );

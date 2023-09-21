@@ -1,6 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const pool = require('./dbConnect');
+const mysql = require('mysql2');
+
+// Configura la conexión a la base de datos MySQL
+const pool = mysql.createPool({
+  host: 'localhost',
+  user: 'root',
+  database: 'fandf_db',
+  password: 'juankmilo2001',
+});
+
 
 // Rutas de autenticación
 router.post('/login', (req, res) => {

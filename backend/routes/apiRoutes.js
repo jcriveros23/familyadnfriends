@@ -1,32 +1,44 @@
 const express = require('express');
 const router = express.Router();
-const pool = require("./dbConnect")
+const mqtt = require('mqtt');
 
-// Rutas de la API
-router.get('/data', async (req, res) => {
-  try {
-    const connection = await pool.getConnection();
-    const [rows, fields] = await connection.execute('SELECT name FROM users WHERE id=1');
-    connection.release();
-    res.json(rows);
-  } catch (error) {
-    console.error('Error al obtener datos de la API:', error);
-    res.status(500).json({ mensaje: 'Error interno del servidor' });
-  }
+const protocol = 'mqtt';
+const host = 'test.mosquitto.org'; // Cambia esto al servidor MQTT al que quieras conectarte
+const port = '1883';
+const topicToPublish = 'familyandfriends/led';
+
+const connectUrl = `${protocol}://${host}:${port}`;
+const clientId = `mqtt_${Math.random().toString(16).slice(3)}`;
+
+const client = mqtt.connect(connectUrl, {
+  clientId,
+  clean: true,
+  connectTimeout: 4000,
+  reconnectPeriod: 1000,
 });
 
-router.post('/create', async (req, res) => {
-  const { data } = req.body; // Reemplaza "data" con los datos que recibas en la solicitud
+client.on('connect', () => {
+  console.log('Connected to MQTT server');
+});
 
-  try {
-    const connection = await pool.getConnection();
-    const result = await connection.execute('INSERT INTO tu_tabla (columna) VALUES (?)', [data]);
-    connection.release();
-    res.json({ mensaje: 'Datos creados exitosamente' });
-  } catch (error) {
-    console.error('Error al crear datos en la API:', error);
-    res.status(500).json({ mensaje: 'Error interno del servidor' });
-  }
+client.on('error', (error) => {
+  console.error('Error de conexión MQTT:', error);
+});
+
+// Ruta para manejar la solicitud POST a /api/start
+router.post('/start', (req, res) => {
+  const { mensaje } = req.body;
+
+  // Publicar un mensaje MQTT
+  client.publish(topicToPublish, mensaje, { qos: 0, retain: false }, (error) => {
+    if (error) {
+      console.error('Error al publicar:', error);
+      res.status(500).json({ mensaje: 'Error al publicar mensaje MQTT' });
+    } else {
+      console.log(`Mensaje publicado en ${topicToPublish}: ${mensaje}`);
+      res.json({ mensaje: 'Mensaje MQTT enviado con éxito' });
+    }
+  });
 });
 
 module.exports = router;

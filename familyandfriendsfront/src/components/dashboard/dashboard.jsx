@@ -1,8 +1,15 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import Card from '../card/card';
+
 const Dashboard = () =>{
     const [nombreUsuario, setNombreUsuario] = useState('');
     const [userId, setUserId] = useState(1); // Cambia esto según tu lógica para obtener el ID de usuario
-  
+    const navigate = useNavigate();
+
+    const handleConfigButton = () =>{
+      navigate('/configuracion');
+    }
     useEffect(() => {
       // Realiza la solicitud al backend cuando el componente se monta
       fetch('http://localhost:3005/api/data')
@@ -22,7 +29,11 @@ const Dashboard = () =>{
   
     return (
       <div className="App">
-        <h1>Nombre de usuario: {nombreUsuario}</h1>
+        <h1>Bienvenido a tu dashboard {nombreUsuario}</h1>
+        <Card nombre={"Temperatura"}/>
+        <Card nombre={"Humedad"}/>
+        <button type='button' onClick={handleConfigButton}>Configurar cultivo</button>
+        <button type='button'>Iniciar cultivo</button>
       </div>
     );
 }

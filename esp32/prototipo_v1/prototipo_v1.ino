@@ -3,14 +3,57 @@
 
 const char* ssid = "FAMILIA RIVEROS";
 const char* password = "riveros2021";
-const char* mqtt_server = "test.mosquitto.org"; // Por ejemplo, "mqtt.eclipse.org"
-const int mqtt_port = 1883; // Puerto MQTT predeterminado
+const char* mqtt_server = "test.mosquitto.org";
+const int mqtt_port = 1883;
+char receivedMessage[256];
+int ledPin = 13; // Pin GPIO 13
+bool ledState = LOW; // Estado inicial del LED
 
-WiFiClient espClient;
-PubSubClient client(espClient);
+void callback(char* topic, byte* payload, unsigned int length) {
+  if(strcmp(topic, "familyandfriends/led") == 0){
+      if (ledState == LOW) {
+      ledState = HIGH;
+    } else {
+      ledState = LOW;
+    }
+    // Enciende o apaga el LED
+    digitalWrite(ledPin, ledState);
+
+  }
+  Serial.print("Mensaje recibido en el tópico: ");
+  Serial.println(topic);
+  Serial.print("Contenido: ");
+  
+  // Copiar el mensaje recibido a la variable 'receivedMessage'
+  for (int i = 0; i < length; i++) {
+    receivedMessage[i] = (char)payload[i];
+    Serial.print(receivedMessage[i]);
+  }
+  
+  receivedMessage[length] = '\0'; // Agregar un carácter nulo al final del mensaje
+  Serial.println();
+}
+
+WiFiClient wifiClient;
+PubSubClient client(wifiClient);
+
+long lastReconnectAttempt = 0;
+
+boolean reconnect() {
+  if (client.connect("esp32Client")) {
+    // Una vez conectado, publica un anuncio...
+    client.publish("familyandfriends/msg", "Hola mundo");
+    // ... y resuscríbete
+    client.subscribe("familyandfriends/#");
+  }
+  return client.connected();
+}
 
 void setup() {
   Serial.begin(115200);
+  pinMode(ledPin, OUTPUT); // Configura el pin del LED como salida
+
+  // Conéctate a la red WiFi
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
@@ -19,42 +62,23 @@ void setup() {
   Serial.println("Conectado a la red WiFi");
 
   client.setServer(mqtt_server, mqtt_port);
-  // Puedes definir funciones de callback para recibir mensajes entrantes
   client.setCallback(callback);
-}
 
-void callback(char* topic, byte* payload, unsigned int length) {
-  Serial.print("Mensaje recibido en el topic: ");
-  Serial.println(topic);
-  Serial.print("Contenido: ");
-  for (int i = 0; i < length; i++) {
-    Serial.print((char)payload[i]);
-  }
-  Serial.println();
-}
-
-void reconnect() {
-  while (!client.connected()) {
-    Serial.println("Conectando al broker MQTT...");
-    if (client.connect("ESP32Client")) {
-      Serial.println("Conexión exitosa al broker MQTT");
-      // Suscríbete a un topic
-      client.subscribe("familyandfriends/#");
-    } else {
-      Serial.print("Error de conexión, rc=");
-      Serial.print(client.state());
-      Serial.println(" Intentando de nuevo en 5 segundos...");
-      delay(5000);
-    }
-  }
+  lastReconnectAttempt = 0;
 }
 
 void loop() {
   if (!client.connected()) {
-    reconnect();
+    long now = millis();
+    if (now - lastReconnectAttempt > 5000) {
+      lastReconnectAttempt = now;
+      // Intenta reconectar
+      if (reconnect()) {
+        lastReconnectAttempt = 0;
+      }
+    }
+  } else {
+    // Cliente conectado
+    client.loop();
   }
-  // Publica un mensaje en un topic
-  client.publish("familyandfriends/msg", "Hola desde ESP32");
-  delay(5000); // Espera 5 segundos antes de publicar otro mensaje
-  client.loop(); // Mantén la conexión MQTT activa
 }
